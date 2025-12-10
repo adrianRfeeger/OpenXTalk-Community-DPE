@@ -1,41 +1,63 @@
 #!/bin/bash
+#
+# generate-dmg.sh - Generate a DMG installer for OpenXTalk/LiveCode
+#
+# This script creates a compressed DMG with the app and an Applications symlink.
+# For modern macOS (10.13+), we use ULFO format for better compatibility.
+#
+# Usage: ./generate-dmg.sh volname srcfolder output
+#
 
-set -x
-
-# If this script is not run as root, the DMG will have incorrect ownership
-if [ $EUID -ne 0 ] ; then
-	# If this is being invoked with the intention of being privileged,
-	# this failure is a hard error.
-	if [ "${GENERATE_DMG_SCRIPT}" != "" ] ; then
-		echo >&2 "ERROR: this script must be run as root"
-		exit -1
-	fi	
-	echo >&2 "WARNING: not building DMG as root; app will have incorrect ownership"
-fi
+set -e
 
 # Arguments are the name of the volume to create, the input folder and the output filename
 if [ $# -ne 3 ] ; then
 	echo >&2 "ERROR: usage: ./generate-dmg.sh volname srcfolder output"
-	exit -2
+	exit 2
 fi
 
 volname="$1"
 srcfolder="$2"
 output="$3"
 
-# Make the DMG
-# UID and GID 99 are magical - they are needed to ensure ownership is correct
-# when the app bundle is copied out of the DMG. They are also the reason that
-# this script needs to be run with root permissions.
-#
-if [ $EUID -eq 0 ] ; then
-  ids="-uid 99 -gid 99"
+# Remove any existing output file
+rm -f "${output}"
+
+# Create a temporary directory for DMG contents
+tmpdir=$(mktemp -d)
+trap "rm -rf ${tmpdir}" EXIT
+
+# Copy the source folder contents
+cp -R "${srcfolder}"/* "${tmpdir}/" 2>/dev/null || cp -R "${srcfolder}" "${tmpdir}/"
+
+# Create Applications symlink if it doesn't exist
+if [ ! -e "${tmpdir}/Applications" ]; then
+    ln -s /Applications "${tmpdir}/Applications"
 fi
 
-hdiutil create -fs HFS+ -format UDRW -scrub ${ids} -attach -volname "${volname}" -srcfolder "${srcfolder}" "${output}"
+# Determine the best format based on macOS version
+# ULFO (lzfse) is best for macOS 10.11+, UDBZ (bzip2) for older
+macos_version=$(sw_vers -productVersion | cut -d. -f1,2)
+if [[ "${macos_version}" > "10.10" ]] || [[ "${macos_version}" == "10.10" ]]; then
+    format="ULFO"
+else
+    format="UDBZ"
+fi
 
-# Ensure the ownership of the output image is correct
-user=$(who am i | awk '{print $1}')
-group=$(id -g -n "${user}")
-chown ${user}:${group} "${output}"
+echo "Creating DMG with format ${format}..."
+
+# Create the DMG
+# Note: We don't need root permissions for modern DMG creation
+hdiutil create \
+    -volname "${volname}" \
+    -srcfolder "${tmpdir}" \
+    -ov \
+    -format "${format}" \
+    "${output}"
+
+# Set permissions
 chmod 644 "${output}"
+
+echo "DMG created: ${output}"
+echo "Volume name: ${volname}"
+echo "Format: ${format}"

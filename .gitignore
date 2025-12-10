@@ -7,6 +7,7 @@
 # ===========================================
 _build/
 _cache/
+dist/
 
 # ===========================================
 # Generated Xcode Projects (can be regenerated with gyp)

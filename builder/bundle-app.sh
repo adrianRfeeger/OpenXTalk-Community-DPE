@@ -129,6 +129,94 @@ if [ -d "${BUILD_DIR}/modules" ]; then
     cp -R "${BUILD_DIR}/modules" "${RESOURCES}/"
 fi
 
+# Copy IDE Toolset (required for the app to start)
+IDE_DIR="${PROJECT_ROOT}/ide"
+if [ -d "${IDE_DIR}" ]; then
+    echo "Bundling IDE..."
+    mkdir -p "${RESOURCES}/ide"
+    
+    # Copy Toolset (required)
+    if [ -d "${IDE_DIR}/Toolset" ]; then
+        echo "  Copying Toolset..."
+        cp -R "${IDE_DIR}/Toolset" "${RESOURCES}/ide/"
+    fi
+    
+    # Copy Plugins
+    if [ -d "${IDE_DIR}/Plugins" ]; then
+        echo "  Copying Plugins..."
+        cp -R "${IDE_DIR}/Plugins" "${RESOURCES}/ide/"
+    fi
+    
+    # Copy Resources
+    if [ -d "${IDE_DIR}/Resources" ]; then
+        echo "  Copying IDE Resources..."
+        cp -R "${IDE_DIR}/Resources" "${RESOURCES}/ide/"
+    fi
+    
+    # Copy Documentation
+    if [ -d "${IDE_DIR}/Documentation" ]; then
+        echo "  Copying Documentation..."
+        cp -R "${IDE_DIR}/Documentation" "${RESOURCES}/ide/"
+    fi
+    
+    # Copy license files
+    for file in "${IDE_DIR}"/*.txt "${IDE_DIR}"/*.pdf; do
+        if [ -f "$file" ]; then
+            cp "$file" "${RESOURCES}/ide/" 2>/dev/null || true
+        fi
+    done
+    
+    # Create Externals folder with bundles (for installed app path lookup)
+    echo "  Setting up Externals folder..."
+    mkdir -p "${RESOURCES}/ide/Externals"
+    for bundle in "${BUILD_DIR}"/*.bundle; do
+        if [ -d "$bundle" ]; then
+            cp -R "$bundle" "${RESOURCES}/ide/Externals/"
+        fi
+    done
+    # Also copy dylibs that might be needed
+    for dylib in "${BUILD_DIR}"/*.dylib; do
+        if [ -f "$dylib" ]; then
+            cp "$dylib" "${RESOURCES}/ide/Externals/"
+        fi
+    done
+    
+    # Create Extensions folder from packaged_extensions
+    if [ -d "${BUILD_DIR}/packaged_extensions" ]; then
+        echo "  Setting up Extensions folder..."
+        mkdir -p "${RESOURCES}/ide/Extensions"
+        cp -R "${BUILD_DIR}/packaged_extensions"/* "${RESOURCES}/ide/Extensions/" 2>/dev/null || true
+    fi
+fi
+
+# Rename the rsrc file to match executable
+if [ -f "${RESOURCES}/LiveCode-Community.rsrc" ]; then
+    mv "${RESOURCES}/LiveCode-Community.rsrc" "${RESOURCES}/${APP_NAME}.rsrc"
+fi
+
+# Create a launcher script that sets REV_TOOLS_PATH
+echo "Creating launcher script..."
+REAL_EXECUTABLE="${APP_NAME}-bin"
+mv "${MACOS}/${APP_NAME}" "${MACOS}/${REAL_EXECUTABLE}"
+
+cat > "${MACOS}/${APP_NAME}" << 'LAUNCHER'
+#!/bin/bash
+# Launcher script for OpenXTalk
+# Sets up environment and launches the real executable
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONTENTS_DIR="$(dirname "$SCRIPT_DIR")"
+RESOURCES_DIR="${CONTENTS_DIR}/Resources"
+
+# Set REV_TOOLS_PATH to the bundled IDE
+export REV_TOOLS_PATH="${RESOURCES_DIR}/ide"
+
+# Launch the real executable
+exec "${SCRIPT_DIR}/OpenXTalk-Community-bin" "$@"
+LAUNCHER
+
+chmod +x "${MACOS}/${APP_NAME}"
+
 # Update Info.plist with correct executable name and modern settings
 echo "Updating Info.plist..."
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable ${APP_NAME}" "${CONTENTS}/Info.plist" 2>/dev/null || true
@@ -178,16 +266,20 @@ for dylib in "${FRAMEWORKS}"/*.dylib; do
 done
 
 # Update executable to find bundled libraries
-if [ -f "${MACOS}/${APP_NAME}" ]; then
+if [ -f "${MACOS}/${REAL_EXECUTABLE}" ]; then
     for dylib in "${FRAMEWORKS}"/*.dylib; do
         if [ -f "$dylib" ]; then
             dylib_name=$(basename "$dylib")
             # Try to update the path in the executable
-            install_name_tool -change "@rpath/${dylib_name}" "@executable_path/../Frameworks/${dylib_name}" "${MACOS}/${APP_NAME}" 2>/dev/null || true
-            install_name_tool -change "${BUILD_DIR}/${dylib_name}" "@executable_path/../Frameworks/${dylib_name}" "${MACOS}/${APP_NAME}" 2>/dev/null || true
+            install_name_tool -change "@rpath/${dylib_name}" "@executable_path/../Frameworks/${dylib_name}" "${MACOS}/${REAL_EXECUTABLE}" 2>/dev/null || true
+            install_name_tool -change "${BUILD_DIR}/${dylib_name}" "@executable_path/../Frameworks/${dylib_name}" "${MACOS}/${REAL_EXECUTABLE}" 2>/dev/null || true
         fi
     done
 fi
+
+# Strip extended attributes and resource forks (required for code signing)
+echo "Stripping extended attributes..."
+xattr -cr "${APP_BUNDLE}"
 
 # Code sign the app
 echo "Code signing..."

@@ -3927,8 +3927,8 @@ struct MCMacDesktop: public MCSystemInterface, public MCMacSystemService
         if (p_map && MCmmap && p_mode == kMCOpenFileModeRead)
         {
             int t_fd = open(*t_path_utf, O_RDONLY);
-            struct stat64 t_buf;
-            if (t_fd != -1 && !fstat64(t_fd, &t_buf))
+            struct stat t_buf;
+            if (t_fd != -1 && !fstat(t_fd, &t_buf))
             {
 				// The length of a file could be > 32-bit, so we have to check that
 				// the file size fits into a 32-bit integer as that is what mmap expects.

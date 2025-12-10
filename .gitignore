@@ -1,168 +1,104 @@
+# ===========================================
+# OpenXTalk Community DPE - Git Ignore File
+# ===========================================
+
+# ===========================================
+# Build Output Directories (LARGE)
+# ===========================================
+_build/
+_cache/
+
+# ===========================================
+# Generated Xcode Projects (can be regenerated with gyp)
+# ===========================================
+build-mac/
+build-linux/
+build-win/
+build-ios/
+build-android/
+
+# ===========================================
+# Prebuilt Binaries (LARGE - download separately)
+# ===========================================
+prebuilt/lib/
+prebuilt/bin/
+prebuilt/unpacked/
+prebuilt/build/
+prebuilt/include/
+prebuilt/share/
+
+# ===========================================
+# macOS System Files
+# ===========================================
+.DS_Store
+**/.DS_Store
 ._*
-._config.py
-._config.py-orig
-._config.pyc
-._config.sh
-._fetch.pyc
-._prebuilts-buildbot.py
-._revbrowser
-._revdb
-._revmobile
-._revpdfprinter
-._revspeech
-._revtestexternal
-._revvideograbber
-._revxml
-._revzip
-build-mac/livecode/util/perfect/._perfect.xcodeproj
-builder/._docs_builder.livecodescript
-builder/._installer.livecode
-builder/._release_notes_builder.livecodescript
-builder/._tools_installer_resources.rev
-engine/src/._engine.lcb
-engine/src/._environment.livecode
-engine/src/environment/._accountsignuppasswordfieldbehaviorbuttonbehavior.livecodescript
-engine/src/environment/._stackbehavior.livecodescript
-extensions/script-libraries/extension-utils/._extension-utils.livecodescript
-libscript/src/._stream.lcb
-gyp/tools/._README
-gyp/._setup.py
-gyp/._OWNERS
-gyp/._LICENSE
-gyp/._gyp
-build-mac/livecode/toolchain/libcompile/._libcompile.xcodeproj
-build-mac/livecode/toolchain/lc-compile/src/._lc-compile-lib.xcodeproj
-build-mac/livecode/toolchain/lc-compile/src/._lc-compile-bootstrap.xcodeproj
-build-mac/livecode/toolchain/lc-compile/._lc-run.xcodeproj
-build-mac/livecode/toolchain/lc-compile/._lc-compile.xcodeproj
-build-mac/livecode/toolchain/lc-compile-ffi-java/src/._lc-compile-ffi-java-lib.xcodeproj
-build-mac/livecode/toolchain/lc-compile-ffi-java/src/._lc-compile-ffi-java-generate.xcodeproj
-build-mac/livecode/toolchain/lc-compile-ffi-java/._lc-compile-ffi-java.xcodeproj
-build-mac/livecode/toolchain/gentle/reflex/._reflex.xcodeproj
-build-mac/livecode/toolchain/gentle/gentle/._grts.xcodeproj
-build-mac/livecode/toolchain/gentle/gentle/._gentle.xcodeproj
-build-mac/livecode/toolchain/._toolchain.xcodeproj
-build-mac/livecode/thirdparty/libzip/._libzip.xcodeproj
-build-mac/livecode/thirdparty/libz/._libz.xcodeproj
-build-mac/livecode/thirdparty/libxslt/._libxslt.xcodeproj
-build-mac/livecode/thirdparty/libxml/._libxml.xcodeproj
-build-mac/livecode/thirdparty/libsqlite/._libsqlite.xcodeproj
-build-mac/livecode/thirdparty/libskia/._libskia.xcodeproj
-build-mac/livecode/thirdparty/libpq/._libpq.xcodeproj
-build-mac/livecode/thirdparty/libpng/._libpng.xcodeproj
-build-mac/livecode/thirdparty/libpcre/._libpcre.xcodeproj
-build-mac/livecode/thirdparty/libopenssl/._libopenssl.xcodeproj
-build-mac/livecode/thirdparty/libmysql/._libmysql.xcodeproj
-build-mac/livecode/thirdparty/libjpeg/._libjpeg.xcodeproj
-build-mac/livecode/thirdparty/libiodbc/._libiodbc.xcodeproj
-build-mac/livecode/thirdparty/libgif/._libgif.xcodeproj
-build-mac/livecode/thirdparty/libcairo/._libcairo.xcodeproj
-build-mac/livecode/revzip/._revzip.xcodeproj
-build-mac/livecode/revxml/._revxml.xcodeproj
-build-mac/livecode/revspeech/._revspeech.xcodeproj
-build-mac/livecode/revpdfprinter/._revpdfprinter.xcodeproj
-build-mac/livecode/revmobile/._revmobile.xcodeproj
-build-mac/livecode/revdb/._revdb.xcodeproj
-build-mac/livecode/revbrowser/._revbrowser.xcodeproj
-build-mac/livecode/prebuilt/._thirdparty.xcodeproj
-build-mac/livecode/prebuilt/._libopenssl.xcodeproj
-build-mac/livecode/prebuilt/._libicu.xcodeproj
-build-mac/livecode/prebuilt/._libcurl.xcodeproj
-build-mac/livecode/prebuilt/._fetch.xcodeproj
-build-mac/livecode/libscript/._libscript.xcodeproj
-build-mac/livecode/libgraphics/._libgraphics.xcodeproj
-build-mac/livecode/libfoundation/libfoundation.xcodeproj/._project.xcworkspace
-build-mac/livecode/libfoundation/._libfoundation.xcodeproj
-build-mac/livecode/libexternalv1/._libexternalv1.xcodeproj
-build-mac/livecode/libexternal/._libexternal.xcodeproj
-build-mac/livecode/libcpptest/._libcpptest.xcodeproj
-build-mac/livecode/libcore/._libcore.xcodeproj
-build-mac/livecode/libbrowser/._libbrowser.xcodeproj
-build-mac/livecode/lcidlc/._lcidlc.xcodeproj
-build-mac/livecode/Installer/._osx-installer-stub.xcodeproj
-build-mac/livecode/extensions/libraries/timezone/tz/._tz.xcodeproj
-build-mac/livecode/extensions/libraries/ini/inih/._inih.xcodeproj
-build-mac/livecode/extensions/._extensions.xcodeproj
-build-mac/livecode/engine/._lcb-modules.xcodeproj
-build-mac/livecode/engine/._kernel.xcodeproj
-build-mac/livecode/engine/._kernel-standalone.xcodeproj
-build-mac/livecode/engine/._kernel-server.xcodeproj
-build-mac/livecode/engine/._kernel-installer.xcodeproj
-build-mac/livecode/engine/._kernel-development.xcodeproj
-build-mac/livecode/engine/._engine.xcodeproj
-build-mac/livecode/engine/._engine-common.xcodeproj
-build-mac/livecode/._livecode.xcodeproj
-ide
-ide
-ide
-engine/rsrc/.DS_Store
-contrib/.DS_Store
-docs/.DS_Store
-engine/.DS_Store
-engine/exec-tests/.DS_Store
-engine/src/.DS_Store
-engine/src/java/.DS_Store
-engine/src/java/com/.DS_Store
-engine/src/java/com/android/.DS_Store
-engine/src/java/com/android/vending/.DS_Store
-engine/src/java/com/runrev/.DS_Store
-engine/src/java/com/runrev/android/.DS_Store
-extensions/.DS_Store
-gyp/.DS_Store
-lcidlc/.DS_Store
-libbrowser/.DS_Store
-libcore/.DS_Store
-libcpptest/.DS_Store
-libexternal/.DS_Store
-libexternalv1/.DS_Store
-libfoundation/.DS_Store
-libgraphics/.DS_Store
-libscript/.DS_Store
-prebuilt/.DS_Store
-revbrowser/.DS_Store
-revdb/.DS_Store
-revpdfprinter/.DS_Store
-revspeech/.DS_Store
-revtestexternal/.DS_Store
-revvideograbber/.DS_Store
-revxml/.DS_Store
-revzip/.DS_Store
-tests/.DS_Store
-toolchain/.DS_Store
-.DS_Store
-.DS_Store
-*.DS_Store*
-._*
-.DS_Store
-.DS_Store
-.DS_Store
-.DS_Store
-build-mac/livecode/prebuilt/._libcurl.xcodeproj
-build-mac/livecode/prebuilt/._libicu.xcodeproj
-build-mac/livecode/prebuilt/._libopenssl.xcodeproj
-build-mac/livecode/prebuilt/._thirdparty.xcodeproj
-build-mac/livecode/prebuilt/._fetch.xcodeproj
-build-mac/livecode/prebuilt/._thirdparty.xcodeproj
-build-mac/livecode/prebuilt/._libopenssl.xcodeproj
-build-mac/livecode/prebuilt/._libicu.xcodeproj
-build-mac/livecode/prebuilt/._libcurl.xcodeproj
-build-mac/livecode/prebuilt/._fetch.xcodeproj
-tools/._extract-debug-symbols.sh
-build-mac/livecode/._livecode.xcodeproj
-build-mac/livecode/engine/._engine-common.xcodeproj
-build-mac/livecode/engine/._engine.xcodeproj
-build-mac/livecode/engine/._kernel-development.xcodeproj
-build-mac/livecode/engine/._kernel-installer.xcodeproj
-build-mac/livecode/engine/._kernel-server.xcodeproj
-build-mac/livecode/engine/._kernel-standalone.xcodeproj
-build-mac/livecode/engine/._kernel.xcodeproj
-build-mac/livecode/engine/._lcb-modules.xcodeproj
-build-mac/livecode/._livecode.xcodeproj
-build-mac/livecode/engine/._engine-common.xcodeproj
-build-mac/livecode/engine/._engine.xcodeproj
-build-mac/livecode/engine/._kernel-development.xcodeproj
-build-mac/livecode/engine/._kernel-installer.xcodeproj
-build-mac/livecode/engine/._kernel-server.xcodeproj
-build-mac/livecode/engine/._kernel-standalone.xcodeproj
-build-mac/livecode/engine/._kernel.xcodeproj
-build-mac/livecode/engine/._lcb-modules.xcodeproj
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# ===========================================
+# Xcode User Data
+# ===========================================
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# ===========================================
+# Compiled Files
+# ===========================================
+*.o
+*.a
+*.so
+*.dylib
+*.dSYM/
+
+# ===========================================
+# Python
+# ===========================================
+*.pyc
+*.pyo
+__pycache__/
+
+# ===========================================
+# IDE and Editor Files
+# ===========================================
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# ===========================================
+# Temporary Files
+# ===========================================
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# ===========================================
+# Configuration (local overrides)
+# ===========================================
+config.py
+config.sh
+
+# ===========================================
+# Test/Sample directories in gyp
+# ===========================================
+gyp/buildbot/
+gyp/samples/
+gyp/test/
+
+# ===========================================
+# Generated Extension Files
+# ===========================================
+extensions/**/*.lcm
+extensions/**/*.lcdoc
+extensions/**/manifest.xml

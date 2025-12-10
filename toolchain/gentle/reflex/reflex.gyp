@@ -18,6 +18,15 @@
 			{
 				'silence_warnings': 1,
 			},
+
+			'xcode_settings':
+			{
+				'OTHER_CFLAGS':
+				[
+					'-Wno-implicit-int',
+					'-Wno-implicit-function-declaration',
+				],
+			},
 	
 			'direct_dependent_settings':
 			{

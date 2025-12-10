@@ -21,6 +21,14 @@ along with LiveCode.  If not see <http://www.gnu.org/licenses/>.  */
 #pragma optimize("y", off)
 #endif
 
+// Disable enum constexpr conversion warnings for this file - the template
+// code intentionally casts integers to enum types, with runtime bounds checks
+// ensuring only valid values are actually used
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wenum-constexpr-conversion"
+#endif
+
 typedef unsigned int uint32_t;
 typedef unsigned short uint16_t; 
 typedef unsigned char uint8_t;
@@ -1388,3 +1396,7 @@ surface_combiner_t s_surface_combiners_nda[] =
 	surface_combine<OPERATION_BLEND_DIFFERENCE, false, true>,
 	surface_combine<OPERATION_BLEND_EXCLUSION, false, true>,
 };
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif

@@ -71,6 +71,10 @@ int2 MCCard::startx;
 int2 MCCard::starty;
 MCObjptr *MCCard::removedcontrol;
 
+// Re-entrancy guard for focus handling to prevent infinite loops
+// when scripts show windows during focus events
+static bool s_kfocus_in_progress = false;
+
 #ifdef _MAC_DESKTOP
 extern bool MCosxmenupoppedup;
 #endif
@@ -332,6 +336,11 @@ void MCCard::kfocus()
 
 Boolean MCCard::kfocusnext(Boolean top)
 {
+	// Guard against re-entrancy to prevent infinite loops when scripts
+	// show windows during focus events
+	if (s_kfocus_in_progress)
+		return False;
+	
 	if (!opened)
 		return False;
 	if (objptrs == NULL)
@@ -339,6 +348,10 @@ Boolean MCCard::kfocusnext(Boolean top)
 		kfocused = oldkfocused = NULL;
 		return False;
 	}
+	
+	// Set the re-entrancy guard
+	s_kfocus_in_progress = true;
+	
 	MCObjptr *startptr;
 	if (kfocused == NULL || top)
 		startptr = objptrs;
@@ -367,7 +380,10 @@ Boolean MCCard::kfocusnext(Boolean top)
 					setstate(false, CS_KFOCUSED);
 					oldkfocused->getref()->kunfocus();
 					if (oldkfocused == NULL)
+					{
+						s_kfocus_in_progress = false;
 						return False;
+					}
 				}
 				if (kfocused == NULL)
 					kfocused = tptr;
@@ -390,6 +406,8 @@ Boolean MCCard::kfocusnext(Boolean top)
 		odefbutton->setdefault(defbutton == NULL);
 	if (!done)
 		message(MCM_focus_in);
+	
+	s_kfocus_in_progress = false;
 	return True;
 }
 

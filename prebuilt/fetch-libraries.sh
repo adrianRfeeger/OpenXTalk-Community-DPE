@@ -90,6 +90,16 @@ function fetchLibrary {
 		fi
 
 		if [ ! -e "${FETCH_DIR}/${NAME}.tar.bz2" ]; then
+			# Skip libraries for Mac Universal builds - these should be built/provided locally
+			if [ "${PLATFORM}" = "mac" ] && [ "${ARCH}" = "Universal" ]; then
+				echo "Skipping ${NAME} - should be built/provided locally for Universal Mac builds"
+				return 0
+			fi
+			# Also skip All-Universal-Headers
+			if [[ "${ARCH}" == "Universal" || "${ARCH}" == *"Universal"* ]]; then
+				echo "Skipping ${NAME} - Universal builds should use locally built libraries"
+				return 0
+			fi
 			echo "Failed to find library ${NAME} either remotely or locally"
 			exit 1
 		fi

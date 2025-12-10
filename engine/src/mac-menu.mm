@@ -1553,25 +1553,43 @@ static void MCPlatformRemoveSubmenuFromMenu(MCPlatformMenuRef p_menu, MCPlatform
 // (at the moment, this is the submenu).
 static void MCPlatformDestroyMenuItem(MCPlatformMenuRef p_menu, uindex_t p_index)
 {
+	// Safety check for null menu
+	if (p_menu == nil || p_menu -> menu == nil)
+		return;
+	
 	NSMenuItem *t_item;
 	t_item = [p_menu -> menu itemAtIndex: p_index];
+	if (t_item == nil)
+		return;
 	
 	NSMenu *t_submenu;
 	t_submenu = [t_item submenu];
 	if (t_submenu == nil)
 		return;
 	
+	// Get the delegate - may be nil if already deallocated
+	id t_delegate = [t_submenu delegate];
+	if (t_delegate == nil)
+	{
+		[t_item setSubmenu: nil];
+		return;
+	}
+	
 	MCPlatformMenuRef t_submenu_ref;
-	t_submenu_ref = [(MCMenuDelegate *)[t_submenu delegate] platformMenuRef];
+	t_submenu_ref = [(MCMenuDelegate *)t_delegate platformMenuRef];
 	
 	// Update the submenu pointer (so we don't have any dangling
 	// refs).
     [t_item setSubmenu: nil];
     
-    MCPlatformRemoveSubmenuFromMenu(p_menu, t_submenu_ref);
+    // Only remove/release if we have a valid submenu ref
+    if (t_submenu_ref != nil)
+    {
+        MCPlatformRemoveSubmenuFromMenu(p_menu, t_submenu_ref);
 	
-	// Now release the platform menu.
-	MCPlatformReleaseMenu(t_submenu_ref);
+        // Now release the platform menu.
+        MCPlatformReleaseMenu(t_submenu_ref);
+    }
 }
 
 // Map the incoming index to the internal menu item index (taking into account
@@ -1626,16 +1644,24 @@ void MCPlatformRetainMenu(MCPlatformMenuRef p_menu)
 
 void MCPlatformReleaseMenu(MCPlatformMenuRef p_menu)
 {
+	// Safety check for null menu
+	if (p_menu == nil)
+		return;
+	
 	p_menu -> references -= 1;
 	if (p_menu -> references != 0)
 		return;
 	
-	// Release any submenus.
-	for(uindex_t i = 0; i < [p_menu -> menu numberOfItems]; i++)
-		MCPlatformDestroyMenuItem(p_menu, i);
+	// Release any submenus - but only if we have a valid menu object
+	if (p_menu -> menu != nil)
+	{
+		for(uindex_t i = 0; i < [p_menu -> menu numberOfItems]; i++)
+			MCPlatformDestroyMenuItem(p_menu, i);
 	
-	[p_menu -> menu release];
-	[p_menu -> menu_delegate release];
+		[p_menu -> menu release];
+	}
+	if (p_menu -> menu_delegate != nil)
+		[p_menu -> menu_delegate release];
     [p_menu -> about_item release];
     [p_menu -> preferences_item release];
     [p_menu -> quit_item release];

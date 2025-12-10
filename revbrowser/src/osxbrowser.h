@@ -19,8 +19,11 @@ along with LiveCode.  If not see <http://www.gnu.org/licenses/>.  */
 
 #include <Carbon/Carbon.h>
 #include <WebKit/WebKit.h>
+// HIWebView and CarbonUtils are deprecated and removed in modern macOS SDKs
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 120000
 #include <WebKit/HIWebView.h>
 #include <WebKit/CarbonUtils.h>
+#endif
 #include <WebKit/WebUIDelegate.h>
 
 #ifndef __REVBROWSER__

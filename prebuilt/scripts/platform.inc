@@ -21,6 +21,12 @@ case $(uname -m) in
 	i*86)
 		HOST_ARCH=i386
 		;;
+	arm64)
+		HOST_ARCH=arm64
+		;;
+	aarch64)
+		HOST_ARCH=arm64
+		;;
 esac
 
 if [ -z "${XCODEBUILD}" ] ; then
@@ -34,7 +40,8 @@ fi
 # Which platform are we actually targeting?
 case "${PLATFORM}" in
 	mac)
-		export UNIVERSAL_ARCHS="x86_64"
+		# Support universal binary builds with both x86_64 and arm64
+		export UNIVERSAL_ARCHS="x86_64 arm64"
 		;;
 	linux)
 		export ARCHS="i386 x86_64"
@@ -89,14 +96,27 @@ function setCCForTarget {
 			CXXFLAGS="/MT"
 			;;
 		mac)
-			# OSX options
+			# macOS options - updated for Apple Silicon support
 			PLATFORM_DEVELOPER="${XCODE_DEVELOPER}/Platforms/MacOSX.platform/Developer"
-			SDK="MacOSX10.9.sdk"
-			OSXGCCVERSION=4.2
-			OSXMIN="10.6"
+			TOOLCHAIN="${XCODE_DEVELOPER}/Toolchains/XcodeDefault.xctoolchain"
+			# Use the latest SDK available, fall back to specific versions
+			if [ -d "${PLATFORM_DEVELOPER}/SDKs/MacOSX.sdk" ] ; then
+				SDK="MacOSX.sdk"
+			elif [ -d "${PLATFORM_DEVELOPER}/SDKs/MacOSX14.0.sdk" ] ; then
+				SDK="MacOSX14.0.sdk"
+			elif [ -d "${PLATFORM_DEVELOPER}/SDKs/MacOSX13.0.sdk" ] ; then
+				SDK="MacOSX13.0.sdk"
+			elif [ -d "${PLATFORM_DEVELOPER}/SDKs/MacOSX12.0.sdk" ] ; then
+				SDK="MacOSX12.0.sdk"
+			elif [ -d "${PLATFORM_DEVELOPER}/SDKs/MacOSX11.0.sdk" ] ; then
+				SDK="MacOSX11.0.sdk"
+			else
+				SDK="MacOSX10.15.sdk"
+			fi
+			OSXMIN="10.13"
 
-			CC_BASE="${XCODE_DEVELOPER}/usr/bin/gcc --sysroot=${PLATFORM_DEVELOPER}/SDKs/${SDK} -isysroot ${PLATFORM_DEVELOPER}/SDKs/${SDK} -mmacosx-version-min=${OSXMIN}"
-			CXX_BASE="${XCODE_DEVELOPER}/usr/bin/g++ --sysroot=${PLATFORM_DEVELOPER}/SDKs/${SDK} -isysroot ${PLATFORM_DEVELOPER}/SDKs/${SDK} -mmacosx-version-min=${OSXMIN}"
+			CC_BASE="${TOOLCHAIN}/usr/bin/clang --sysroot=${PLATFORM_DEVELOPER}/SDKs/${SDK} -isysroot ${PLATFORM_DEVELOPER}/SDKs/${SDK} -mmacosx-version-min=${OSXMIN}"
+			CXX_BASE="${TOOLCHAIN}/usr/bin/clang++ --sysroot=${PLATFORM_DEVELOPER}/SDKs/${SDK} -isysroot ${PLATFORM_DEVELOPER}/SDKs/${SDK} -mmacosx-version-min=${OSXMIN}"
 			CC="${CC_BASE} -arch ${ARCH}"
 			CXX="${CXX_BASE} -arch ${ARCH}"
 			;;

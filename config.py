@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (C) 2017 LiveCode Ltd.
 #
 # This file is part of LiveCode.
@@ -30,7 +30,9 @@ BUILDBOT_PLATFORM_TRIPLES = (
     'arm64-android-ndk16r15',
     'x86-android-ndk16r15',
     'x86_64-android-ndk16r15',
-    'universal-mac-macosx10.9', # Minimum deployment target
+    'universal-mac-macosx10.13', # Universal binary (x86_64 + arm64)
+    'arm64-mac-macosx11.0', # Native ARM64 Mac
+    'x86_64-mac-macosx10.13', # Intel Mac
     'universal-ios-iphoneos14.5',
     'universal-ios-iphoneos14.4',
     'universal-ios-iphoneos13.2',
@@ -49,7 +51,8 @@ BUILDBOT_PLATFORM_TRIPLES = (
 KNOWN_PLATFORMS = (
     'linux-x86', 'linux-x86_64', 'linux-armv6hf', 'linux-armv7',
     'android-armv6', 'android-armv7', 'android-arm64', 'android-x86', 'android-x86_64',
-    'mac', 'ios', 
+    'mac', 'mac-x86_64', 'mac-arm64', 'mac-universal',
+    'ios', 
     'win-x86', 'win-x86_64', 
     'emscripten'
 )
@@ -121,7 +124,11 @@ def guess_platform():
     system = platform.system()
     arch = platform.machine()
     if system == 'Darwin':
-        return 'mac'
+        # On macOS, detect if we're on ARM64 (Apple Silicon)
+        if arch == 'arm64':
+            return 'mac-arm64'
+        else:
+            return 'mac-x86_64'
     if system == 'Linux':
         if re.match('^(x|i.?)86$', arch) is not None:
             return 'linux-x86'
@@ -137,6 +144,8 @@ def exec_gyp(args):
     gyp_lib = os.path.join(os.path.dirname(sys.argv[0]), 'gyp', 'pylib')
     sys.path.insert(0, gyp_lib)
     import gyp
+    # Add flag to allow duplicate basenames (needed for some thirdparty libs)
+    args = ['--no-duplicate-basename-check'] + args
     print('gyp ' + ' '.join(args))
     sys.exit(gyp.main(args))
 
@@ -273,17 +282,34 @@ def validate_os(opts):
 def host_platform(opts):
     opts['HOST_PLATFORM'] = guess_platform()
 
-def guess_xcode_arch(target_sdk):
-    sdk, ver = re.match('^([^\d]*)(\d*)', target_sdk).groups()
+def guess_xcode_arch(target_sdk, target_platform=None):
+    sdk, ver = re.match(r'^([^\d]*)(\d*)', target_sdk).groups()
     if sdk == 'macosx':
-        return 'x86_64'
+        # For macOS, support universal binaries (x86_64 + arm64)
+        # If a specific platform is specified, use that
+        if target_platform == 'mac-arm64':
+            return 'arm64'
+        elif target_platform == 'mac-x86_64':
+            return 'x86_64'
+        elif target_platform == 'mac-universal':
+            return 'x86_64 arm64'
+        else:
+            # Default to universal binary for macOS 11.0+ SDK
+            if ver and int(ver) >= 11:
+                return 'x86_64 arm64'
+            else:
+                return 'x86_64 arm64'  # Build universal by default
     if sdk == 'iphoneos':
-        if int(ver) < 8:
+        if ver and int(ver) < 8:
             return 'armv7'
         else:
             return 'armv7 arm64'
     if sdk == 'iphonesimulator':
-        return 'x86_64'
+        # For iOS simulator, include arm64 for Apple Silicon Macs
+        if ver and int(ver) >= 14:
+            return 'x86_64 arm64'
+        else:
+            return 'x86_64 arm64'  # Support both architectures
 
 def validate_target_arch(opts):
     if opts['TARGET_ARCH'] is None:
@@ -295,7 +321,21 @@ def validate_target_arch(opts):
             opts['UNIFORM_ARCH'] = opts['TARGET_ARCH']
             return
 
-        platform_arch = re.search('-(x86|x86_64|arm(64|v(6(hf)?|7)))$', platform)
+        # Handle mac-specific platform variants
+        if platform == 'mac-arm64':
+            opts['TARGET_ARCH'] = 'arm64'
+            opts['UNIFORM_ARCH'] = opts['TARGET_ARCH']
+            return
+        elif platform == 'mac-x86_64':
+            opts['TARGET_ARCH'] = 'x86_64'
+            opts['UNIFORM_ARCH'] = opts['TARGET_ARCH']
+            return
+        elif platform == 'mac-universal':
+            opts['TARGET_ARCH'] = 'x86_64 arm64'
+            opts['UNIFORM_ARCH'] = 'universal'
+            return
+
+        platform_arch = re.search('-(x86|x86_64|arm(64|v(6(hf)?|7)|universal))$', platform)
         if platform_arch is not None:
             opts['TARGET_ARCH'] = platform_arch.group(1)
             opts['UNIFORM_ARCH'] = opts['TARGET_ARCH']
@@ -303,10 +343,14 @@ def validate_target_arch(opts):
 
         if re.match('^(ios|mac)', platform) is not None:
             validate_xcode_sdks(opts)
-            arch = guess_xcode_arch(opts['XCODE_TARGET_SDK'])
+            arch = guess_xcode_arch(opts['XCODE_TARGET_SDK'], platform)
             if arch is not None:
                 opts['TARGET_ARCH'] = arch
-                opts['UNIFORM_ARCH'] = opts['TARGET_ARCH']
+                # For universal builds, set UNIFORM_ARCH appropriately
+                if ' ' in arch:
+                    opts['UNIFORM_ARCH'] = 'universal'
+                else:
+                    opts['UNIFORM_ARCH'] = opts['TARGET_ARCH']
                 return
 
         error("Couldn't guess target architecture for '{}'".format(platform))
@@ -347,7 +391,7 @@ def guess_java_home(platform):
         try:
             javac_str = '/bin/javac'
             javac_path = subprocess.check_output(['/usr/bin/env',
-                         'readlink', '-f', '/usr' + javac_str]).strip()
+                         'readlink', '-f', '/usr' + javac_str]).decode('utf-8').strip()
             if (os.path.isfile(javac_path) and
                 javac_path.endswith(javac_str)):
                 return javac_path[:-len(javac_str)]
@@ -358,7 +402,7 @@ def guess_java_home(platform):
     # More guesses
     try:
         if os.path.isfile('/usr/libexec/java_home'):
-            return subprocess.check_output('/usr/libexec/java_home').strip()
+            return subprocess.check_output('/usr/libexec/java_home').decode('utf-8').strip()
     except subprocess.CalledProcessError as e:
         print(e)
         pass
@@ -498,8 +542,10 @@ def validate_windows_tools(opts):
 def validate_xcode_sdks(opts):
     if opts['XCODE_TARGET_SDK'] is None:
         validate_os(opts)
+        validate_platform(opts)
         if opts['OS'] == 'mac':
-            opts['XCODE_TARGET_SDK'] = 'macosx10.9'
+            # Use the latest macOS SDK available
+            opts['XCODE_TARGET_SDK'] = 'macosx'
         elif opts['OS'] == 'ios':
             opts['XCODE_TARGET_SDK'] = 'iphoneos'
 

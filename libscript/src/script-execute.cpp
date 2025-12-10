@@ -295,6 +295,7 @@ public:
         void (*t_objc_msgSend)() = nullptr;
         size_t t_rsize = t_cif->rtype->size;
 #if defined(__ARM64__)
+        (void)t_rsize; // suppress unused warning on ARM64
         t_objc_msgSend = (void(*)())objc_msgSend;
 #elif defined(__ARM__)
         if (t_cif->rtype->type == FFI_TYPE_STRUCT &&

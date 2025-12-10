@@ -147,7 +147,7 @@
 					{
 						'SDKROOT[platform=macosx*]': '<(host_sdk)',
 						'SUPPORTED_PLATFORMS': 'macosx',
-						'ARCHS': 'x86_64',
+						'ARCHS': '$(ARCHS_STANDARD)',
 						
 						'SYMROOT': '$(SOLUTION_DIR)/_build/ios/<(host_sdk)',
 						'OBJROOT': '$(SOLUTION_DIR)/_cache/ios/<(host_sdk)',

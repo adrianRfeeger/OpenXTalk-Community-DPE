@@ -106,6 +106,10 @@ static bool s_lock_responder_change = false;
 	if (s_lock_responder_change)
 		return YES;
 	
+	// Set focus event guard to prevent nested event loops during focus handling
+	bool t_was_inside_focus_event = s_inside_focus_event;
+	s_inside_focus_event = true;
+	
 	if ([p_responder isKindOfClass: [NSView class]])
 	{
 		NSView *t_view;
@@ -115,6 +119,7 @@ static bool s_lock_responder_change = false;
 			if ([t_view respondsToSelector:@selector(com_runrev_livecode_nativeViewId)])
 			{
 				[(MCWindowDelegate *)[self delegate] viewFocusSwitched: (uintptr_t)[t_view com_runrev_livecode_nativeViewId]];
+				s_inside_focus_event = t_was_inside_focus_event;
 				return YES;
 			}
 			
@@ -124,6 +129,7 @@ static bool s_lock_responder_change = false;
 	
 	[(MCWindowDelegate *)[self delegate] viewFocusSwitched: 0];
 	
+	s_inside_focus_event = t_was_inside_focus_event;
 	return YES;
 }
 
@@ -219,6 +225,10 @@ static bool s_lock_responder_change = false;
 	if (s_lock_responder_change)
 		return YES;
 	
+	// Set focus event guard to prevent nested event loops during focus handling
+	bool t_was_inside_focus_event = s_inside_focus_event;
+	s_inside_focus_event = true;
+	
 	if ([p_responder isKindOfClass: [NSView class]])
 	{
 		NSView *t_view;
@@ -228,6 +238,7 @@ static bool s_lock_responder_change = false;
 			if ([t_view respondsToSelector:@selector(com_runrev_livecode_nativeViewId)])
 			{
 				[(MCWindowDelegate *)[self delegate] viewFocusSwitched: (uintptr_t)[t_view com_runrev_livecode_nativeViewId]];
+				s_inside_focus_event = t_was_inside_focus_event;
 				return YES;
 			}
 			
@@ -237,6 +248,7 @@ static bool s_lock_responder_change = false;
 	
 	[(MCWindowDelegate *)[self delegate] viewFocusSwitched: 0];
 	
+	s_inside_focus_event = t_was_inside_focus_event;
 	return YES;
 }
 
@@ -1332,14 +1344,17 @@ static void map_key_event(NSEvent *event, MCPlatformKeyCode& r_key_code, codepoi
 
 - (void)draggedImage:(NSImage *)image beganAt:(NSPoint)point
 {
+	// Drag operation has begun - no special handling needed
 }
 
 - (void)draggedImage:(NSImage *)image movedTo:(NSPoint)point
 {
+	// Drag operation is moving - no special handling needed
 }
 
 - (void)draggedImage:(NSImage *)image endedAt:(NSPoint)point operation:(NSDragOperation)operation
 {
+	// Drag operation has ended - no special handling needed
 }
 
 - (NSDragOperation)dragImage:(NSImage *)image offset:(NSSize)offset allowing:(NSDragOperation)operations pasteboard:(NSPasteboard *)pboard

@@ -1,9 +1,78 @@
 # OpenXTalk Community Edition 
+
+> ⚠️ **Work in Progress** — This fork is under active development with ARM64/Apple Silicon support. More updates coming soon!
+
 OpenXTalk is derived from legacy LiveCode Community Edition code base that is Copyright © 2003-2019 LiveCode Ltd., Edinburgh, UK
+
+## What's New in This Fork
+
+This fork adds **ARM64/Apple Silicon support** for macOS, enabling OpenXTalk to run natively on M1/M2/M3/M4 Macs.
+
+### ✅ Completed Features
+
+- **Universal Binary Support** — Builds for both `arm64` and `x86_64` architectures
+- **Apple Silicon Native** — Runs natively on M-series Macs without Rosetta 2
+- **Updated Build System** — gyp/Xcode project generation updated for modern macOS SDKs
+- **Python 3 Compatibility** — Build scripts updated from Python 2 to Python 3
+- **libffi ARM64 Fix** — FFI trampoline system updated for ARM64 compatibility
+- **Modern macOS Bundling** — New `bundle-app.sh` script creates distributable app bundles and DMGs
+- **Code Signing Ready** — Supports ad-hoc and Developer ID signing with hardened runtime
+
+### 🚧 Known Issues (Work in Progress)
+
+- **Window Ordering** — Some window ordering issues when interacting with palettes and dialogs
+- **Testing** — Comprehensive testing on various macOS versions still in progress
+
+### 📋 Coming Soon
+
+- Further window management fixes for modern macOS
+- Additional testing and bug fixes
+- Documentation updates
 
 ## Introduction
 
 The OpenXTalk Community open source platform provides a way to build applications for mobile, desktop and server platforms.
+
+## Quick Start (macOS ARM64/Intel)
+
+### Building from Source
+
+```bash
+# Clone the repository with submodules
+git clone --recursive https://github.com/adrianRfeeger/OpenXTalk-Community-DPE.git
+cd OpenXTalk-Community-DPE
+
+# Generate Xcode project
+make config-mac
+
+# Build (Universal Binary: arm64 + x86_64)
+make compile-mac
+
+# Or build directly with Xcode
+xcodebuild -project build-mac/livecode/engine/engine.xcodeproj \
+    -target development -configuration Release \
+    -arch arm64 -arch x86_64
+```
+
+### Creating a Distributable App
+
+```bash
+# Create bundled app with DMG
+./builder/bundle-app.sh -d
+
+# Output: dist/OpenXTalk-Community.app and dist/OpenXTalk-Community.dmg
+```
+
+### Bundle Script Options
+
+```bash
+./builder/bundle-app.sh [options]
+  -d, --dmg                 Create a DMG file
+  -c, --codesign IDENTITY   Code signing identity (default: ad-hoc)
+  -n, --notarize            Prepare for notarisation
+  -o, --output DIR          Output directory (default: ./dist)
+  -h, --help                Show help
+```
 
 ## Overview
 

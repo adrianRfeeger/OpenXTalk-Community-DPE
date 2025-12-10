@@ -4,8 +4,8 @@
 	branch = develop-9.6
 [submodule "thirdparty"]
 	path = thirdparty
-	url = https://github.com/livecode/livecode-thirdparty
-	branch = develop-9.6
+	url = https://github.com/adrianRfeeger/livecode-thirdparty
+	branch = arm64-support
 [submodule "libcpptest/googletest"]
 	path = libcpptest/googletest
 	url = https://github.com/google/googletest.git

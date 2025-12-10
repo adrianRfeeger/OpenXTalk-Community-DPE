@@ -189,6 +189,31 @@ if [ -d "${IDE_DIR}" ]; then
     fi
 fi
 
+# Copy ide-support folder (contains essential libraries like revSaveAsStandalone)
+IDE_SUPPORT_DIR="${PROJECT_ROOT}/ide-support"
+if [ -d "${IDE_SUPPORT_DIR}" ]; then
+    echo "Bundling ide-support libraries..."
+    cp -R "${IDE_SUPPORT_DIR}" "${RESOURCES}/"
+fi
+
+# Create Runtime folder with standalone engines for building standalones
+echo "Setting up Runtime folder for standalone building..."
+RUNTIME_DIR="${RESOURCES}/ide/Runtime"
+mkdir -p "${RUNTIME_DIR}"
+
+# Mac OS X runtime (Universal binary - x86_64 + arm64)
+if [ -d "${BUILD_DIR}/Standalone-Community.app" ]; then
+    echo "  Copying Mac OS X runtime (Universal binary)..."
+    mkdir -p "${RUNTIME_DIR}/Mac OS X/x86-64"
+    cp -R "${BUILD_DIR}/Standalone-Community.app" "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app"
+    
+    # Rename the executable inside to match expected name
+    if [ -f "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app/Contents/MacOS/Standalone-Community" ]; then
+        mv "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app/Contents/MacOS/Standalone-Community" \
+           "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app/Contents/MacOS/Standalone-Community"
+    fi
+fi
+
 # Rename the rsrc file to match executable
 if [ -f "${RESOURCES}/LiveCode-Community.rsrc" ]; then
     mv "${RESOURCES}/LiveCode-Community.rsrc" "${RESOURCES}/${APP_NAME}.rsrc"

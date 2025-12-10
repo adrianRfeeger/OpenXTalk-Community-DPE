@@ -158,19 +158,26 @@ on revSaveAsStandalone pStack, pFolder, pPreview, pSuppressSuccessMsg
    put revSBGetSettings(pStack) into tSettings
    
    -- MM-2014-03-21: [[ PPC Support Dropped ]] Assume all mac builds to now be Intel.
+   -- OpenXTalk: Migrate old settings to MacOSX Universal for ARM64 + x86-64 support
    if tSettings["MacOSX"] then
       delete variable tSettings["MacOSX"]
-      put true into tSettings["MacOSX x86-64"]
+      put true into tSettings["MacOSX Universal"]
       put true into tEdited
    end if
    if tSettings["MacOSX PowerPC-32"] then
       delete variable tSettings["MacOSX PowerPC-32"]
-      put true into tSettings["MacOSX x86-64"]
+      put true into tSettings["MacOSX Universal"]
       put true into tEdited
    end if
    if tSettings["MacOSX x86-32"] then
       delete variable tSettings["MacOSX x86-32"]
-      put true into tSettings["MacOSX x86-64"]
+      put true into tSettings["MacOSX Universal"]
+      put true into tEdited
+   end if
+   -- OpenXTalk: Also migrate x86-64 only to Universal
+   if tSettings["MacOSX x86-64"] and not tSettings["MacOSX Universal"] then
+      delete variable tSettings["MacOSX x86-64"]
+      put true into tSettings["MacOSX Universal"]
       put true into tEdited
    end if
    

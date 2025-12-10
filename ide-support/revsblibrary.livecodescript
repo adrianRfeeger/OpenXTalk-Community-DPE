@@ -456,7 +456,14 @@ on revSBEnsureFolder pFolder
 end revSBEnsureFolder
 
 command revSBRemoveUnneededSlicesFromMacCode pTargetFile, pSettings
+   -- OpenXTalk: For Universal builds, keep all architectures (x86_64 + arm64)
+   -- Only remove slices if specifically building for a single architecture
    if the platform is "macos" and pSettings is not empty then
+      -- If building Universal, don't remove any slices
+      if pSettings["MacOSX Universal"] is true then
+         return empty
+      end if
+      
       local tRemove
       if pSettings["MacOSX x86-64"] is true and pSettings["MacOSX x86-32"] is not true then
          put "i386" into tRemove
@@ -714,7 +721,8 @@ function revFolderNameMakeLegal pName
 end revFolderNameMakeLegal
 
 // List of all desktop target platforms + architecture
-constant kDesktopTargets = "Windows,Windows x86-64,MacOSX x86-64,Linux,Linux x64,Linux armv6-hf"
+// OpenXTalk: Added MacOSX Universal for ARM64 + x86-64 support
+constant kDesktopTargets = "Windows,Windows x86-64,MacOSX Universal,MacOSX x86-64,Linux,Linux x64,Linux armv6-hf"
 function revSBDesktopTargets
    return kDesktopTargets
 end revSBDesktopTargets
@@ -850,7 +858,8 @@ constant kAnswerDialog               = "true"
 constant kCursors                    = "false"
 
 // SN-2015-01-21: [[ Bug 14371 ]] 'MacOSX' has been replaced by 'MacOSX x86-32'
-constant kInitialTargets = "Windows,MacOSX x86-64,Linux"
+// OpenXTalk: Changed default Mac target to Universal for Apple Silicon support
+constant kInitialTargets = "Windows,MacOSX Universal,Linux"
 
 on revSBDefaultStandaloneSettings pStack, @xSettingsA
    local tPlatform,tName
@@ -895,8 +904,9 @@ on revSBDefaultStandaloneSettings pStack, @xSettingsA
    
    -- build for every platform we have engines for
    repeat for each item tTarget in kInitialTargets
-      if tTarget is "MacOSX x86-64" then 
-         if xSettingsA["MacOSX x86-32"] then next repeat
+      -- OpenXTalk: Skip if already have a Mac target set
+      if tTarget is "MacOSX Universal" or tTarget is "MacOSX x86-64" then 
+         if xSettingsA["MacOSX x86-32"] or xSettingsA["MacOSX x86-64"] or xSettingsA["MacOSX Universal"] then next repeat
       end if
       if xSettingsA[tTarget] = "" then
          put revEngineCheck(tTarget) into xSettingsA[tTarget]
@@ -913,8 +923,9 @@ on revSBDefaultStandaloneSettings pStack, @xSettingsA
    
    -- Since the intel choice, set the default here:
    -- MM-2014-03-21: [[ PPC Support Dropped ]] Only create standalone setting for Intel (for OS X) by default.
-   if xSettingsA["MacOSX x86-64"] is empty and xSettingsA["MacOSX x86-32"] is empty then
-      put true into xSettingsA["MacOSX x86-64"]
+   -- OpenXTalk: Default to Universal for Apple Silicon support
+   if xSettingsA["MacOSX Universal"] is empty and xSettingsA["MacOSX x86-64"] is empty and xSettingsA["MacOSX x86-32"] is empty then
+      put true into xSettingsA["MacOSX Universal"]
    end if
    
    -- Auto-remove stack passwords from community stacks
@@ -1016,11 +1027,13 @@ function revEngineCheck pEngine
       end if
       
       -- MM-2014-03-21: [[ PPC Support Dropped ]] Assume all OSX builds to be Intel.
+      -- OpenXTalk: Added Universal target for ARM64 + x86-64 support
       switch pEngine
          case "MacOSX"
          case "MacOSX PowerPC-32"
          case "MacOSX x86-32"
          case "MacOSX x86-64"
+         case "MacOSX Universal"
             return there is a directory (tPath & "/Mac OS X/x86-64/Standalone.app")
          case "Windows"
             if there is a file (tPath & "/Windows/x86-32/Standalone") then
@@ -3042,11 +3055,13 @@ function revSBEnginePath pPlatform
       -- MM-2014-03-21: [[ PPC Support Dropped ]] We now only support intel Mac builds. Assume all mac builds to be intel.
       local tRuntimePath
       put revEnvironmentRuntimePath() into tRuntimePath
+      -- OpenXTalk: Added Universal target for ARM64 + x86-64 support
       switch pPlatform
          case "MacOSX"
          case "MacOSX PowerPC-32"
          case "MacOSX x86-32"
          case "MacOSX x86-64"
+         case "MacOSX Universal"
             // SN-2015-07-09: [[ StandaloneDeployment ]] Gypified Standalone-<edition>.app building does not
             //  allow to create broken applications, so that the executable file in it bears the edition.
             put the upper of char 1 of tEdition into char 1 of tEdition

@@ -190,10 +190,11 @@ if [ -d "${IDE_DIR}" ]; then
 fi
 
 # Copy ide-support folder (contains essential libraries like revSaveAsStandalone)
+# Place inside ide/ folder so it's in sToolsPath and can be found by revInternal__StackFiles
 IDE_SUPPORT_DIR="${PROJECT_ROOT}/ide-support"
 if [ -d "${IDE_SUPPORT_DIR}" ]; then
     echo "Bundling ide-support libraries..."
-    cp -R "${IDE_SUPPORT_DIR}" "${RESOURCES}/"
+    cp -R "${IDE_SUPPORT_DIR}" "${RESOURCES}/ide/"
 fi
 
 # Create Runtime folder with standalone engines for building standalones

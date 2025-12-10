@@ -1082,23 +1082,15 @@ end revEngineCheck
 #   if no file was chosen.
 function utilityChooseIconFile pTargetPlatform
   local tPrompt
-  put "Select icon file: " into tPrompt
+  put "Select icon file:" into tPrompt
   
-  local tTypes
-  put "All files|*" & return into tTypes
-  
-  # Roughly preserves old behavior, just using answer file with type instead of filter.
   local tIconFile
   if pTargetPlatform is "Mac OS X" then
-    put "Icon Resource Files|icns|ICNS" after tTypes
+    answer file tPrompt with type "Icon Resource Files|icns|ICNS" or type "All files|*"
   else if pTargetPlatform is "Windows" then
-    put "Icon Files|ico|ICO" after tTypes
-  end if
-  
-  if the number of lines of tTypes is 2 then
-    answer file tPrompt with type (line 2 of tTypes) or type (line 1 of tTypes)
+    answer file tPrompt with type "Icon Files|ico|ICO" or type "All files|*"
   else
-    answer file tPrompt with type (line 1 of tTypes)
+    answer file tPrompt with type "All files|*"
   end if
   put it into tIconFile
   

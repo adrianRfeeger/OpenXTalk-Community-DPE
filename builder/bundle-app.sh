@@ -9,6 +9,7 @@
 # 4. Optionally notarises the app for Gatekeeper
 #
 # Usage: ./bundle-app.sh [options]
+#   -a, --arch ARCH           Architecture: universal, intel, arm64 (default: universal)
 #   -c, --codesign IDENTITY   Code signing identity (default: ad-hoc "-")
 #   -d, --dmg                 Create a DMG file
 #   -n, --notarize            Notarise the app (requires Apple Developer account)
@@ -26,6 +27,7 @@ OUTPUT_DIR="${PROJECT_ROOT}/dist"
 CODESIGN_IDENTITY="-"
 CREATE_DMG=false
 NOTARIZE=false
+ARCH="universal"
 
 # App name configuration
 APP_NAME="OpenXTalk-Community"
@@ -35,6 +37,10 @@ VOLUME_NAME="OpenXTalk Community"
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -a|--arch)
+            ARCH="$2"
+            shift 2
+            ;;
         -c|--codesign)
             CODESIGN_IDENTITY="$2"
             shift 2
@@ -53,6 +59,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h|--help)
             echo "Usage: $0 [options]"
+            echo "  -a, --arch ARCH           Architecture: universal, intel, arm64 (default: universal)"
             echo "  -c, --codesign IDENTITY   Code signing identity (default: ad-hoc)"
             echo "  -d, --dmg                 Create a DMG file"
             echo "  -n, --notarize            Notarise the app (requires Apple Developer account)"
@@ -67,7 +74,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Validate architecture option
+case "${ARCH}" in
+    universal|intel|arm64)
+        ;;
+    *)
+        echo "ERROR: Invalid architecture '${ARCH}'. Must be: universal, intel, or arm64"
+        exit 1
+        ;;
+esac
+
 echo "=== OpenXTalk App Bundler for macOS ==="
+echo "Architecture: ${ARCH}"
 echo ""
 
 # Check if build exists
@@ -91,6 +109,42 @@ MACOS="${CONTENTS}/MacOS"
 RESOURCES="${CONTENTS}/Resources"
 FRAMEWORKS="${CONTENTS}/Frameworks"
 
+# Function to thin a binary to a specific architecture
+thin_binary() {
+    local file="$1"
+    local arch="$2"
+    
+    if [ -f "$file" ] && file "$file" | grep -q "universal binary"; then
+        local lipo_arch
+        case "$arch" in
+            intel) lipo_arch="x86_64" ;;
+            arm64) lipo_arch="arm64" ;;
+        esac
+        
+        if lipo "$file" -verify_arch "$lipo_arch" 2>/dev/null; then
+            lipo "$file" -thin "$lipo_arch" -output "${file}.thin"
+            mv "${file}.thin" "$file"
+        fi
+    fi
+}
+
+# Function to thin all binaries in a directory
+thin_directory() {
+    local dir="$1"
+    local arch="$2"
+    
+    # Thin Mach-O executables and libraries
+    find "$dir" -type f \( -perm +111 -o -name "*.dylib" -o -name "*.so" \) 2>/dev/null | while read -r file; do
+        thin_binary "$file" "$arch"
+    done
+    
+    # Thin binaries inside .bundle and .app directories
+    find "$dir" -type d \( -name "*.bundle" -o -name "*.app" \) 2>/dev/null | while read -r bundle; do
+        find "$bundle" -type f \( -perm +111 -o -name "*.dylib" \) 2>/dev/null | while read -r file; do
+            thin_binary "$file" "$arch"
+        done
+    done
+}
 # Rename the executable
 if [ -f "${MACOS}/LiveCode-Community" ]; then
     mv "${MACOS}/LiveCode-Community" "${MACOS}/${APP_NAME}"
@@ -203,7 +257,7 @@ RUNTIME_DIR="${RESOURCES}/ide/Runtime"
 mkdir -p "${RUNTIME_DIR}"
 
 # Mac OS X runtime (Universal binary - arm64 + x86_64)
-# Copy to both 'universal' folder (for MacOSX Universal target) and 'x86-64' folder (for legacy compatibility)
+# Copy to 'universal', 'arm64', and 'x86-64' folders for all three Mac targets
 if [ -d "${BUILD_DIR}/Standalone-Community.app" ]; then
     echo "  Copying Mac OS X runtime (Universal binary)..."
     
@@ -211,9 +265,21 @@ if [ -d "${BUILD_DIR}/Standalone-Community.app" ]; then
     mkdir -p "${RUNTIME_DIR}/Mac OS X/universal"
     cp -R "${BUILD_DIR}/Standalone-Community.app" "${RUNTIME_DIR}/Mac OS X/universal/Standalone.app"
     
-    # Also copy to x86-64 folder for legacy compatibility with MacOSX x86-64 target
+    # ARM64 folder for MacOSX ARM64 target (thin to arm64 only)
+    mkdir -p "${RUNTIME_DIR}/Mac OS X/arm64"
+    cp -R "${BUILD_DIR}/Standalone-Community.app" "${RUNTIME_DIR}/Mac OS X/arm64/Standalone.app"
+    if [ "${ARCH}" = "universal" ]; then
+        echo "    Thinning ARM64 runtime to arm64 only..."
+        thin_directory "${RUNTIME_DIR}/Mac OS X/arm64" "arm64"
+    fi
+    
+    # x86-64 folder for MacOSX Intel target (thin to x86_64 only)
     mkdir -p "${RUNTIME_DIR}/Mac OS X/x86-64"
     cp -R "${BUILD_DIR}/Standalone-Community.app" "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app"
+    if [ "${ARCH}" = "universal" ]; then
+        echo "    Thinning Intel runtime to x86_64 only..."
+        thin_directory "${RUNTIME_DIR}/Mac OS X/x86-64" "intel"
+    fi
 fi
 
 # Rename the rsrc file to match executable
@@ -302,6 +368,13 @@ if [ -f "${MACOS}/${REAL_EXECUTABLE}" ]; then
             install_name_tool -change "${BUILD_DIR}/${dylib_name}" "@executable_path/../Frameworks/${dylib_name}" "${MACOS}/${REAL_EXECUTABLE}" 2>/dev/null || true
         fi
     done
+fi
+
+# Thin binaries if not building universal
+if [ "$ARCH" != "universal" ]; then
+    echo "Thinning binaries to ${ARCH} architecture..."
+    thin_directory "${APP_BUNDLE}" "${ARCH}"
+    echo "  Done thinning binaries"
 fi
 
 # Strip extended attributes and resource forks (required for code signing)

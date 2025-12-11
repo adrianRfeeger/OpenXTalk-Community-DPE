@@ -22,11 +22,8 @@ end libraryStack
 function GetBuildPlatform
 	switch the platform
 		case "MacOS"
-			if the processor is "x86_64" then
-				return "MacOSX x86-64"
-			else
-				return "MacOSX x86-32"
-			end if
+			-- OpenXTalk: Default to Universal for Apple Silicon support
+			return "MacOSX Universal"
 			break
 		case "Windows"
 			return "Windows"
@@ -84,6 +81,9 @@ function StandaloneBuilderResources pStack, pExecutablePath
 	
 	set the itemdelimiter to slash
 	switch GetBuildPlatform()
+	   case "MacOSX Universal"
+	   case "MacOSX ARM64"
+	   case "MacOSX Intel"
 	   case "MacOSX x86-64"
 	   case "MacOSX x86-32"
 	      put item 1 to -3 of pExecutablePath & "/Resources/_MacOS" into tResources

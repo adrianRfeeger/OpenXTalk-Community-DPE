@@ -120,9 +120,10 @@ on __Start
       split tPlatforms by comma as set
       
       -- fiddle with the build platforms for 64 bit
+      -- OpenXTalk: Default to Universal for Apple Silicon support
       if tPlatforms["MacOSX"] then
          delete variable tPlatforms["MacOSX"]
-         put true into tPlatforms["MacOSX x86-64"]
+         put true into tPlatforms["MacOSX Universal"]
       end if
       put true into tPlatforms["Linux x64"]
    else

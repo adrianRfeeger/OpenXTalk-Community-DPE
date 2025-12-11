@@ -158,7 +158,9 @@ on revSaveAsStandalone pStack, pFolder, pPreview, pSuppressSuccessMsg
    put revSBGetSettings(pStack) into tSettings
    
    -- MM-2014-03-21: [[ PPC Support Dropped ]] Assume all mac builds to now be Intel.
-   -- OpenXTalk: Migrate old settings to MacOSX Universal for ARM64 + x86-64 support
+   -- OpenXTalk: Migrate old legacy settings to MacOSX Universal for ARM64 + x86-64 support
+   -- Only migrate truly legacy settings (MacOSX, PowerPC-32, x86-32)
+   -- Keep x86-64 as Intel option for users who want Intel-only builds
    if tSettings["MacOSX"] then
       delete variable tSettings["MacOSX"]
       put true into tSettings["MacOSX Universal"]
@@ -174,10 +176,10 @@ on revSaveAsStandalone pStack, pFolder, pPreview, pSuppressSuccessMsg
       put true into tSettings["MacOSX Universal"]
       put true into tEdited
    end if
-   -- OpenXTalk: Also migrate x86-64 only to Universal
-   if tSettings["MacOSX x86-64"] and not tSettings["MacOSX Universal"] then
+   -- OpenXTalk: Map legacy MacOSX x86-64 to MacOSX Intel for clearer naming
+   if tSettings["MacOSX x86-64"] then
       delete variable tSettings["MacOSX x86-64"]
-      put true into tSettings["MacOSX Universal"]
+      put true into tSettings["MacOSX Intel"]
       put true into tEdited
    end if
    
@@ -442,12 +444,18 @@ private function revStandalonePlatformDetails pTarget
    local tArchFolder
    switch tPlatform
       case "MacOSX"
-         -- OpenXTalk: Support both Universal (arm64+x86-64) and x86-64 only builds
+         -- OpenXTalk: Support Universal (arm64+x86-64), ARM64, and Intel builds
          if pTarget is "MacOSX Universal" then
             put "Mac OS X/universal" into tArchFolder
             put "universal" into tDetailsA["architecture"]
+         else if pTarget is "MacOSX ARM64" then
+            put "Mac OS X/arm64" into tArchFolder
+            put "arm64" into tDetailsA["architecture"]
+         else if pTarget is "MacOSX Intel" or pTarget is "MacOSX x86-64" then
+            put "Mac OS X/x86-64" into tArchFolder
+            put "x86-64" into tDetailsA["architecture"]
          else
-            -- Legacy x86-64 only
+            -- Legacy fallback to x86-64
             put "Mac OS X/x86-64" into tArchFolder
             put "x86-64" into tDetailsA["architecture"]
          end if
@@ -690,9 +698,13 @@ command revSaveAsMacStandalone pStack, pRestoreFileName, pFolder, @xStandalonePa
       
       -- OpenXTalk: Set architecture based on target
       -- Universal includes both x86-64 and arm64 for Apple Silicon support
+      -- ARM64 is arm64 only, Intel is x86-64 only
       if tTarget is "MacOSX Universal" then
          put "x86-64,arm64" into tArchitectures
+      else if tTarget is "MacOSX ARM64" then
+         put "arm64" into tArchitectures
       else
+         -- MacOSX Intel, MacOSX x86-64, or legacy targets
          put "x86-64" into tArchitectures
       end if
       
@@ -749,18 +761,20 @@ command revSaveAsMacStandalone pStack, pRestoreFileName, pFolder, @xStandalonePa
       
       revRedirectMacOSResources tStandalonePath
       
+      -- OpenXTalk: Sign each Mac app bundle immediately after building
+      -- This must happen inside the loop so all targets get signed
+      if the platform is "MacOS" then
+         local tAppBundle
+         set the itemDel to slash
+         put item 1 to -4 of tStandalonePath into tAppBundle
+         set the itemDel to comma
+         clearExtendedAttributes tAppBundle
+         performAdHocCodesign tAppBundle
+      end if
+      
       --Restore stack to its post-savingStandalone message state
       __RestoreStackFromTemporaryLocation pStack, pRestoreFileName, tOriginalFileName
    end repeat
-   
-   if the platform is "MacOS" then
-      local tAppBundle
-      set the itemDel to slash
-      put item 1 to -4 of tStandalonepath into tAppBundle
-      set the itemDel to comma
-      clearExtendedAttributes tAppBundle
-      performAdHocCodesign tAppBundle
-   end if
    
    revStandalonePostBuild pStack, pFolder
    
@@ -1219,6 +1233,9 @@ private command revOutputDirectories pFolder
       end if
    end repeat
    if tOSXCount > 0 then add 1 to tPlatforms
+   -- OpenXTalk: Track base output directory for macOS
+   -- When multiple Mac targets are selected, each gets its own subfolder
+   local tMacBaseDir
    repeat for each item tTarget in tTargets
       if sStandaloneSettingsA[tTarget] = true then
          if not revDownloadEngine(tTarget) then
@@ -1229,12 +1246,32 @@ private command revOutputDirectories pFolder
          local tPlatform
          put revSBTargetToPlatform(tTarget) into tPlatform
          
-         # Skip this platform if we've already done OSX building
+         # OpenXTalk: For macOS, each target gets its own subfolder when multiple are selected
          if tPlatform is "MacOSX" then
-            if tOSXCount is 0 then next repeat
-            put 0 into tOSXCount -- Reset the count to zero to force other OSX platforms to be ignored
-            # As we are doing Universal builds or single slice then use platform as folder name for Mac
-            put revSBStandaloneOutputDirectory(sStandaloneSettingsA["name"], tCount, pFolder, tPlatform, tPlatforms > 1) into tDirectory
+            -- Set the base output directory once for all Mac targets
+            if tMacBaseDir is empty then
+               put revSBStandaloneOutputDirectory(sStandaloneSettingsA["name"], tCount, pFolder, tPlatform, tPlatforms > 1) into tMacBaseDir
+            end if
+            -- If multiple Mac targets selected, put each in its own subfolder
+            if tOSXCount > 1 then
+               local tArchSubfolder
+               switch tTarget
+                  case "MacOSX Universal"
+                     put "universal" into tArchSubfolder
+                     break
+                  case "MacOSX ARM64"
+                     put "arm64" into tArchSubfolder
+                     break
+                  case "MacOSX Intel"
+                     put "x86-64" into tArchSubfolder
+                     break
+                  default
+                     put "x86-64" into tArchSubfolder
+               end switch
+               put tMacBaseDir & tArchSubfolder & "/" into tDirectory
+            else
+               put tMacBaseDir into tDirectory
+            end if
          else
             put revSBStandaloneOutputDirectory(sStandaloneSettingsA["name"], tCount, pFolder, tTarget, tPlatforms > 1) into tDirectory
          end if
@@ -2410,7 +2447,7 @@ private command revCopyExternals pPlatform, pStackFilePath, pEnginePath, pStanda
          --revAddExternal "revpdfprinter"
          local tRevPdfPrinterExecutable
          put tCurrentLocation & "/revpdfprinter.bundle/Contents/MacOS/revpdfprinter" into tRevPdfPrinterExecutable
-         revSBRemoveUnneededSlicesFromMacCode tRevPdfPrinterExecutable, sStandaloneSettingsA
+         revSBRemoveUnneededSlicesFromMacCode tRevPdfPrinterExecutable, sStandaloneSettingsA, pPlatform
       end if
    end if
    
@@ -2421,7 +2458,7 @@ private command revCopyExternals pPlatform, pStackFilePath, pEnginePath, pStanda
          revStandaloneAddWarning tPlatform && tArch & ", Support, revsecurity" & tSharedExtension && the result & ": required for SSL."
       else
          --revAddExternal "revsecurity"
-         revSBRemoveUnneededSlicesFromMacCode tCurrentLocation & "/revsecurity.dylib", sStandaloneSettingsA
+         revSBRemoveUnneededSlicesFromMacCode tCurrentLocation & "/revsecurity.dylib", sStandaloneSettingsA, pPlatform
       end if
    end if
    

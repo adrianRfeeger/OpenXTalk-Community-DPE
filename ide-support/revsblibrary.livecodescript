@@ -455,20 +455,50 @@ on revSBEnsureFolder pFolder
    return the result
 end revSBEnsureFolder
 
-command revSBRemoveUnneededSlicesFromMacCode pTargetFile, pSettings
+command revSBRemoveUnneededSlicesFromMacCode pTargetFile, pSettings, pCurrentTarget
    -- OpenXTalk: For Universal builds, keep all architectures (x86_64 + arm64)
    -- Only remove slices if specifically building for a single architecture
+   -- pCurrentTarget optionally specifies which target is currently being built
    if the platform is "macos" and pSettings is not empty then
-      -- If building Universal, don't remove any slices
-      if pSettings["MacOSX Universal"] is true then
-         return empty
-      end if
-      
       local tRemove
-      if pSettings["MacOSX x86-64"] is true and pSettings["MacOSX x86-32"] is not true then
-         put "i386" into tRemove
-      else if pSettings["MacOSX x86-32"] is true and pSettings["MacOSX x86-64"] is not true then
-         put "x86_64" into tRemove
+      
+      -- If a specific target was passed, use that to determine slice removal
+      if pCurrentTarget is not empty then
+         switch pCurrentTarget
+            case "MacOSX Universal"
+               -- Keep all slices for Universal build
+               return empty
+            case "MacOSX ARM64"
+               -- Remove x86_64 slice for ARM64-only build
+               put "x86_64" into tRemove
+               break
+            case "MacOSX Intel"
+               -- Remove arm64 slice for Intel-only build
+               put "arm64" into tRemove
+               break
+            default
+               -- For legacy targets or unknown, remove arm64
+               put "arm64" into tRemove
+         end switch
+      else
+         -- Fall back to checking settings (original behaviour for single-target builds)
+         -- If building Universal, don't remove any slices
+         if pSettings["MacOSX Universal"] is true then
+            return empty
+         end if
+         
+         -- OpenXTalk: Handle new Intel and ARM64 targets
+         if pSettings["MacOSX Intel"] is true then
+            -- Remove arm64 slice for Intel-only build
+            put "arm64" into tRemove
+         else if pSettings["MacOSX ARM64"] is true then
+            -- Remove x86_64 slice for ARM64-only build
+            put "x86_64" into tRemove
+         else if pSettings["MacOSX x86-64"] is true and pSettings["MacOSX x86-32"] is not true then
+            put "i386" into tRemove
+         else if pSettings["MacOSX x86-32"] is true and pSettings["MacOSX x86-64"] is not true then
+            put "x86_64" into tRemove
+         end if
       end if
       
       if tRemove is not empty then
@@ -721,8 +751,8 @@ function revFolderNameMakeLegal pName
 end revFolderNameMakeLegal
 
 // List of all desktop target platforms + architecture
-// OpenXTalk: Added MacOSX Universal for ARM64 + x86-64 support
-constant kDesktopTargets = "Windows,Windows x86-64,MacOSX Universal,MacOSX x86-64,Linux,Linux x64,Linux armv6-hf"
+// OpenXTalk: Added MacOSX Universal, MacOSX ARM64, MacOSX Intel for Apple Silicon support
+constant kDesktopTargets = "Windows,Windows x86-64,MacOSX Universal,MacOSX ARM64,MacOSX Intel,Linux,Linux x64,Linux armv6-hf"
 function revSBDesktopTargets
    return kDesktopTargets
 end revSBDesktopTargets
@@ -905,8 +935,8 @@ on revSBDefaultStandaloneSettings pStack, @xSettingsA
    -- build for every platform we have engines for
    repeat for each item tTarget in kInitialTargets
       -- OpenXTalk: Skip if already have a Mac target set
-      if tTarget is "MacOSX Universal" or tTarget is "MacOSX x86-64" then 
-         if xSettingsA["MacOSX x86-32"] or xSettingsA["MacOSX x86-64"] or xSettingsA["MacOSX Universal"] then next repeat
+      if tTarget is "MacOSX Universal" or tTarget is "MacOSX ARM64" or tTarget is "MacOSX Intel" or tTarget is "MacOSX x86-64" then 
+         if xSettingsA["MacOSX x86-32"] or xSettingsA["MacOSX x86-64"] or xSettingsA["MacOSX Universal"] or xSettingsA["MacOSX ARM64"] or xSettingsA["MacOSX Intel"] then next repeat
       end if
       if xSettingsA[tTarget] = "" then
          put revEngineCheck(tTarget) into xSettingsA[tTarget]
@@ -924,7 +954,7 @@ on revSBDefaultStandaloneSettings pStack, @xSettingsA
    -- Since the intel choice, set the default here:
    -- MM-2014-03-21: [[ PPC Support Dropped ]] Only create standalone setting for Intel (for OS X) by default.
    -- OpenXTalk: Default to Universal for Apple Silicon support
-   if xSettingsA["MacOSX Universal"] is empty and xSettingsA["MacOSX x86-64"] is empty and xSettingsA["MacOSX x86-32"] is empty then
+   if xSettingsA["MacOSX Universal"] is empty and xSettingsA["MacOSX ARM64"] is empty and xSettingsA["MacOSX Intel"] is empty and xSettingsA["MacOSX x86-64"] is empty and xSettingsA["MacOSX x86-32"] is empty then
       put true into xSettingsA["MacOSX Universal"]
    end if
    
@@ -1027,15 +1057,18 @@ function revEngineCheck pEngine
       end if
       
       -- MM-2014-03-21: [[ PPC Support Dropped ]] Assume all OSX builds to be Intel.
-      -- OpenXTalk: Added Universal target for ARM64 + x86-64 support
+      -- OpenXTalk: Added Universal, ARM64, and Intel targets for Apple Silicon support
       switch pEngine
          case "MacOSX"
          case "MacOSX PowerPC-32"
          case "MacOSX x86-32"
          case "MacOSX x86-64"
+         case "MacOSX Intel"
             return there is a directory (tPath & "/Mac OS X/x86-64/Standalone.app")
          case "MacOSX Universal"
             return there is a directory (tPath & "/Mac OS X/universal/Standalone.app")
+         case "MacOSX ARM64"
+            return there is a directory (tPath & "/Mac OS X/arm64/Standalone.app")
          case "Windows"
             if there is a file (tPath & "/Windows/x86-32/Standalone") then
                return true
@@ -3048,12 +3081,13 @@ function revSBEnginePath pPlatform
       -- MM-2014-03-21: [[ PPC Support Dropped ]] We now only support intel Mac builds. Assume all mac builds to be intel.
       local tRuntimePath
       put revEnvironmentRuntimePath() into tRuntimePath
-      -- OpenXTalk: Added Universal target for ARM64 + x86-64 support
+      -- OpenXTalk: Added Universal, ARM64, and Intel targets for Apple Silicon support
       switch pPlatform
          case "MacOSX"
          case "MacOSX PowerPC-32"
          case "MacOSX x86-32"
          case "MacOSX x86-64"
+         case "MacOSX Intel"
             // SN-2015-07-09: [[ StandaloneDeployment ]] Gypified Standalone-<edition>.app building does not
             //  allow to create broken applications, so that the executable file in it bears the edition.
             put the upper of char 1 of tEdition into char 1 of tEdition
@@ -3062,6 +3096,10 @@ function revSBEnginePath pPlatform
          case "MacOSX Universal"
             put the upper of char 1 of tEdition into char 1 of tEdition
             return tRuntimePath & "/Mac OS X/universal/Standalone.app/Contents/MacOS/Standalone-" & tEdition
+            break
+         case "MacOSX ARM64"
+            put the upper of char 1 of tEdition into char 1 of tEdition
+            return tRuntimePath & "/Mac OS X/arm64/Standalone.app/Contents/MacOS/Standalone-" & tEdition
             break
          case "Windows"
             return tRuntimePath & "/Windows/x86-32/Standalone"

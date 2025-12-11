@@ -17,6 +17,19 @@ This fork adds **ARM64/Apple Silicon support** for macOS, enabling OpenXTalk to 
 - **libffi ARM64 Fix** — FFI trampoline system updated for ARM64 compatibility
 - **Modern macOS Bundling** — New `bundle-app.sh` script creates distributable app bundles and DMGs
 - **Code Signing Ready** — Supports ad-hoc and Developer ID signing with hardened runtime
+- **Multi-Architecture Standalone Building** — Build standalone applications for Universal, ARM64-only, or Intel-only targets
+
+### 🆕 Standalone Architecture Options
+
+The Standalone Application Settings now include three macOS architecture options:
+
+| Option | Description | Output Folder |
+|--------|-------------|---------------|
+| **Universal (arm64 & x86-64)** | Runs on both Apple Silicon and Intel Macs | `MacOSX/universal/` |
+| **Apple Silicon (arm64)** | ARM64-only, smaller size, Apple Silicon Macs only | `MacOSX/arm64/` |
+| **Intel (x86-64)** | Intel-only, for older Macs or compatibility testing | `MacOSX/x86-64/` |
+
+When multiple architecture options are selected, each is built to its own subfolder within the output directory.
 
 ### 🚧 Known Issues (Work in Progress)
 
@@ -67,12 +80,18 @@ xcodebuild -project build-mac/livecode/engine/engine.xcodeproj \
 
 ```bash
 ./builder/bundle-app.sh [options]
+  -a, --arch ARCH           Architecture: universal, arm64, or x86-64 (default: universal)
   -d, --dmg                 Create a DMG file
   -c, --codesign IDENTITY   Code signing identity (default: ad-hoc)
   -n, --notarize            Prepare for notarisation
   -o, --output DIR          Output directory (default: ./dist)
   -h, --help                Show help
 ```
+
+The bundle script creates three runtime engine folders for standalone building:
+- `Mac OS X/universal/` — Universal binary runtime (arm64 + x86-64)
+- `Mac OS X/arm64/` — ARM64-only runtime for Apple Silicon
+- `Mac OS X/x86-64/` — Intel-only runtime for x86-64
 
 ## Overview
 

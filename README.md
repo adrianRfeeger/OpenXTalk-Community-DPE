@@ -25,9 +25,9 @@ The Standalone Application Settings now include three macOS architecture options
 
 | Option | Description | Output Folder |
 |--------|-------------|---------------|
-| **Universal (arm64 & x86-64)** | Runs on both Apple Silicon and Intel Macs | `MacOSX/universal/` |
-| **Apple Silicon (arm64)** | ARM64-only, smaller size, Apple Silicon Macs only | `MacOSX/arm64/` |
-| **Intel (x86-64)** | Intel-only, for older Macs or compatibility testing | `MacOSX/x86-64/` |
+| **Universal (arm64 & x86-64)** | Runs on both Apple Silicon and Intel Macs | `/universal/` |
+| **Apple Silicon (arm64)** | ARM64-only, smaller size, Apple Silicon Macs only | `/arm64/` |
+| **Intel (x86-64)** | Intel-only, for older Macs or compatibility testing | `/x86-64/` |
 
 When multiple architecture options are selected, each is built to its own subfolder within the output directory.
 

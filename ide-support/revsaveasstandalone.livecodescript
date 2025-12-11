@@ -442,13 +442,18 @@ private function revStandalonePlatformDetails pTarget
    local tArchFolder
    switch tPlatform
       case "MacOSX"
-         -- MM-2014-03-21: [[ PPC Support Dropped ]] We now only support intel Mac builds. Assume all mac builds to be intel.
-         -- MW-2013-06-13: [[ CloneAndRun ]] If not installated type, then take from the binaries folder.
-         put "Mac OS X/x86-64" into tArchFolder
+         -- OpenXTalk: Support both Universal (arm64+x86-64) and x86-64 only builds
+         if pTarget is "MacOSX Universal" then
+            put "Mac OS X/universal" into tArchFolder
+            put "universal" into tDetailsA["architecture"]
+         else
+            -- Legacy x86-64 only
+            put "Mac OS X/x86-64" into tArchFolder
+            put "x86-64" into tDetailsA["architecture"]
+         end if
          put ".bundle" into tDetailsA["loadable_extension"]
          put ".dylib" into tDetailsA["shared_extension"]
-         put "MacOSX" into  tDetailsA["platform"]
-         put "x86-64" into tDetailsA["architecture"]
+         put "MacOSX" into tDetailsA["platform"]
          break
       case "Windows"
          if pTarget is "Windows" then
@@ -670,9 +675,8 @@ command revSaveAsMacStandalone pStack, pRestoreFileName, pFolder, @xStandalonePa
       put tStackPath & "/" before sStandaloneSettingsA["OSX,plist"]
    end if
    
-   -- Architectures
+   -- Architectures - will be set per target in the loop
    local tArchitectures
-   put "x86-64" into tArchitectures
    
    -- keep a copy of the standalone settings to restore after each build
    local tStandaloneSettingsA
@@ -683,6 +687,14 @@ command revSaveAsMacStandalone pStack, pRestoreFileName, pFolder, @xStandalonePa
       
       -- Ensure standalone settings script local is reset when building for subsequent targets
       put tStandaloneSettingsA into sStandaloneSettingsA
+      
+      -- OpenXTalk: Set architecture based on target
+      -- Universal includes both x86-64 and arm64 for Apple Silicon support
+      if tTarget is "MacOSX Universal" then
+         put "x86-64,arm64" into tArchitectures
+      else
+         put "x86-64" into tArchitectures
+      end if
       
       revStandalonePreBuild pStack, pFolder, "macosx", tArchitectures, tStackName, tStackFileList
       if the result is not empty then 
@@ -1759,9 +1771,13 @@ private command revSetMacOS pWhatFile, pPlatformCode, pEnginePath
          create folder (item 1 to -3 of pWhatFile & "/Resources")
       end if
       
-      -- MM-2014-03-21: [[ PPC Support Dropped ]] We no longer include universal builds so set icon prefix to intel standalone.
+      -- OpenXTalk: Use universal folder for default icons (fallback to x86-64 for compatibility)
       local tIconPrefix
-      put  revEnvironmentRuntimePath() & "/Mac OS X/x86-64/Standalone.app/Contents/Resources/Standalone" into tIconPrefix
+      if there is a folder (revEnvironmentRuntimePath() & "/Mac OS X/universal/Standalone.app") then
+         put revEnvironmentRuntimePath() & "/Mac OS X/universal/Standalone.app/Contents/Resources/Standalone" into tIconPrefix
+      else
+         put revEnvironmentRuntimePath() & "/Mac OS X/x86-64/Standalone.app/Contents/Resources/Standalone" into tIconPrefix
+      end if
       
       if sStandaloneSettingsA["OSX,iconFile"] is not empty then
          revSBCopyFile sStandaloneSettingsA["OSX,iconFile"], item 1 to -3 of pWhatFile & "/Resources/Standalone.icns", "revStandaloneProgressCallback", the long id of me

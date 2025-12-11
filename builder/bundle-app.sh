@@ -202,17 +202,18 @@ echo "Setting up Runtime folder for standalone building..."
 RUNTIME_DIR="${RESOURCES}/ide/Runtime"
 mkdir -p "${RUNTIME_DIR}"
 
-# Mac OS X runtime (Universal binary - x86_64 + arm64)
+# Mac OS X runtime (Universal binary - arm64 + x86_64)
+# Copy to both 'universal' folder (for MacOSX Universal target) and 'x86-64' folder (for legacy compatibility)
 if [ -d "${BUILD_DIR}/Standalone-Community.app" ]; then
     echo "  Copying Mac OS X runtime (Universal binary)..."
+    
+    # Universal folder for MacOSX Universal target
+    mkdir -p "${RUNTIME_DIR}/Mac OS X/universal"
+    cp -R "${BUILD_DIR}/Standalone-Community.app" "${RUNTIME_DIR}/Mac OS X/universal/Standalone.app"
+    
+    # Also copy to x86-64 folder for legacy compatibility with MacOSX x86-64 target
     mkdir -p "${RUNTIME_DIR}/Mac OS X/x86-64"
     cp -R "${BUILD_DIR}/Standalone-Community.app" "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app"
-    
-    # Rename the executable inside to match expected name
-    if [ -f "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app/Contents/MacOS/Standalone-Community" ]; then
-        mv "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app/Contents/MacOS/Standalone-Community" \
-           "${RUNTIME_DIR}/Mac OS X/x86-64/Standalone.app/Contents/MacOS/Standalone-Community"
-    fi
 fi
 
 # Rename the rsrc file to match executable

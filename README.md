@@ -89,9 +89,9 @@ xcodebuild -project build-mac/livecode/engine/engine.xcodeproj \
 ```
 
 The bundle script creates three runtime engine folders for standalone building:
-- `Mac OS X/universal/` — Universal binary runtime (arm64 + x86-64)
-- `Mac OS X/arm64/` — ARM64-only runtime for Apple Silicon
-- `Mac OS X/x86-64/` — Intel-only runtime for x86-64
+- `/universal/` — Universal binary runtime (arm64 + x86-64)
+- `/arm64/` — ARM64-only runtime for Apple Silicon
+- `/x86-64/` — Intel-only runtime for x86-64
 
 ## Overview
 
